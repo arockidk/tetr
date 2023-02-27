@@ -5,7 +5,7 @@ let tile_color_array: string[] = ["z", "s", "l", "j", "i", "t", "o", "b", "g"];
 interface ITile {
     color: tile_color;
     element: HTMLDivElement
-}
+} 
 
 let tiles: ITile[] = [];
 const block_masks = {
