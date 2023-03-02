@@ -66,25 +66,25 @@ function bitwiseMatrixComparison(a, b, action) {
     var result = [];
     if (action === "and") {
         for (var row = 0; row < a.length; row++) {
-            result[row] = [];
-            for (var col = 0; col < b.length; col++) {
-                result[row][col] = a[row][col] && b[col][row];
+            result.push([]);
+            for (var col = 0; col < a[row].length; col++) {
+                result[row][col] = a[row][col] && b[row][col];
             }
         }
     }
     else if (action === "or") {
         for (var row = 0; row < a.length; row++) {
-            result[row] = [];
-            for (var col = 0; col < b.length; col++) {
-                result[row][col] = a[row][col] || b[col][row];
+            result.push([]);
+            for (var col = 0; col < a[row].length; col++) {
+                result[row][col] = a[row][col] || b[row][col];
             }
         }
     }
     else if (action === "xor") {
         for (var row = 0; row < a.length; row++) {
-            result[row] = [];
-            for (var col = 0; col < b.length; col++) {
-                result[row][col] = a[row][col] ^ b[col][row];
+            result.push([]);
+            for (var col = 0; col < a[row].length; col++) {
+                result[row][col] = a[row][col] ^ b[row][col];
             }
         }
     }
@@ -153,11 +153,13 @@ function moveBlock(block_color, topLeft, rot_state, vector) {
     console.log(success);
     if (success) {
         createBlock(block_color, new_pos, rot_state);
+        return true;
     }
     else {
         createBlock(block_color, topLeft, rot_state);
         // deleteBlock(block_color, new_pos, rot_state);
-        console.error("EEE", topLeft);
+        console.log("EEE", topLeft);
+        return false;
     }
 }
 function createTiles() {
@@ -173,7 +175,7 @@ var SPAWN_POS = { x: 1, y: 0 };
 window.onload = function () {
     createTiles();
     var board_state;
-    createBlock("i", { x: 1, y: 16 }, 0);
+    createBlock("o", { x: 1, y: 16 }, 0);
     setInterval(function () {
         if (!piece_spawned) {
             createBlock("t", SPAWN_POS, 0);
@@ -181,11 +183,12 @@ window.onload = function () {
             piece_spawned = true;
         }
         try {
-            moveBlock("t", cur_top_left, 0, { x: 0, y: 1 });
-            cur_top_left.y += 1;
+            if (moveBlock("t", cur_top_left, 0, { x: 0, y: 1 })) {
+                cur_top_left.y += 1;
+            }
         }
         catch (error) {
         }
         // console.log("y =", cur_top_left.y);
-    }, 1000 / 60);
+    }, 1000 / 3);
 };

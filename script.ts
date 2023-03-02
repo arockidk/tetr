@@ -89,24 +89,25 @@ function bitwiseMatrixComparison(a: number[][], b: number[][], action: "and" | "
     let result: number[][] = [];
     if (action === "and") {
         for (let row = 0; row < a.length; row++) {
-            result[row] = [];
-            for (let col = 0; col < b.length; col++) {
-                result[row][col] = a[row][col] && b[col][row];
+            result.push([]);
+            for (let col = 0; col < a[row].length; col++) {
+                result[row][col] = a[row][col] && b[row][col];
             }
         }
     } else if (action === "or") {
         
         for (let row = 0; row < a.length; row++) {
-            result[row] = [];
-            for (let col = 0; col < b.length; col++) {
-                result[row][col] = a[row][col] || b[col][row];
+            result.push([]);
+            for (let col = 0; col < a[row].length; col++) {
+                result[row][col] = a[row][col] || b[row][col];
             }
         }
     } else if (action === "xor") {
         for (let row = 0; row < a.length; row++) {
-            result[row] = [];
-            for (let col = 0; col < b.length; col++) {
-                result[row][col] = a[row][col] ^ b[col][row];
+            result.push([]);
+            for (let col = 0; col < a[row].length; col++) {
+                result[row][col] = a[row][col] ^ b[row][col];
+                
             }
         }
     }
@@ -172,7 +173,7 @@ function deleteBlock(block_color: tile_color, topLeft: {x: number,y:number}, rot
     }
 
 }
-function moveBlock(block_color: tile_color, topLeft: {x: number,y: number}, rot_state: rotation_state, vector: {x: number, y: number}) {
+function moveBlock(block_color: tile_color, topLeft: {x: number,y: number}, rot_state: rotation_state, vector: {x: number, y: number}):boolean  {
     let new_pos = {x: topLeft.x + vector.x, y: topLeft.y + vector.y};
     deleteBlock(block_color, topLeft, rot_state);
     let success: boolean;
@@ -191,12 +192,15 @@ function moveBlock(block_color: tile_color, topLeft: {x: number,y: number}, rot_
     if (success) {
         
         createBlock(block_color, new_pos, rot_state);
+        return true;
         
         
     } else {
         createBlock(block_color, topLeft, rot_state);
         // deleteBlock(block_color, new_pos, rot_state);
-        console.error("EEE", topLeft)
+        console.log("EEE", topLeft)
+        return false;
+
     }
 
 
@@ -214,23 +218,28 @@ let cur_top_left: {x: number, y: number} = {x: 1, y: 0}
 const SPAWN_POS = {x: 1, y: 0};
 
 window.onload = function() {
-    createTiles();
-    let board_state;
-    createBlock("i",{x:1, y:16}, 0)
-    setInterval(function() {
-        if (!piece_spawned) {
-            
-            createBlock("t",SPAWN_POS,0); 
-            cur_top_left = SPAWN_POS;
-            piece_spawned = true;
-        }
-        try {
-            moveBlock("t", cur_top_left, 0, {x:0,y:1});
-            cur_top_left.y += 1;
-        } catch (error) {
-        }
+        createTiles();
+        let board_state;
+        createBlock("o", {x:1, y:16}, 0)
+        setInterval(function() {
+            if (!piece_spawned) {
+                
+                createBlock("t",SPAWN_POS,0); 
+                cur_top_left = SPAWN_POS;
+                piece_spawned = true;
+            }
+            try {
+                if (moveBlock("t", cur_top_left, 0, {x:0,y:1})) {
+                    cur_top_left.y += 1;
+                }
+                
+            } catch (error) {
+                
+            }
 
+            
+            // console.log("y =", cur_top_left.y);
+        },1000/3 )
         
-        // console.log("y =", cur_top_left.y);
-    },1000/60)
+
 }
