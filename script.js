@@ -50,6 +50,7 @@ function getTileAt(array, x, y) {
     return array[y * COLUMNS + x];
 }
 function getITileAt(x, y) {
+    // console.log(x,y,y * COLUMNS + x, tiles[y * COLUMNS + x]);
     return tiles[y * COLUMNS + x];
 }
 function getSolidsFromRectangle(topLeft, size) {
@@ -57,10 +58,31 @@ function getSolidsFromRectangle(topLeft, size) {
     for (var row = 0; row < size.y; row++) {
         solids[row] = [];
         for (var col = 0; col < size.x; col++) {
-            solids[row][col] = getITileAt(topLeft.x + col, topLeft.y + row).color === "b" ? 0 : 1;
+            var itile = getITileAt(topLeft.x + col, topLeft.y + row);
+            try {
+                solids[row][col] = itile.color === "b" ? 0 : 1;
+            }
+            catch (error) {
+                // console.log("errored")
+                solids[row][col] = 1;
+            }
         }
     }
+    // console.table(solids);
     return solids;
+}
+function matrixContains(matrix, needle) {
+    for (var i = 0; i < matrix.length; i++) {
+        var row = matrix[i];
+        for (var j = 0; j < row.length; j++) {
+            var element = row[j];
+            // console.log(element,i,j);
+            if (element === needle) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 function bitwiseMatrixComparison(a, b, action) {
     var result = [];
@@ -90,6 +112,30 @@ function bitwiseMatrixComparison(a, b, action) {
     }
     return result;
 }
+function formattedArray(array) {
+    var formatted = "[";
+    for (var i = 0; i < array.length; i++) {
+        var e = array[i];
+        if (e instanceof Array) {
+            formatted += formattedArray(e);
+        }
+        else {
+            formatted += e.toString();
+            if (i !== array.length - 1) {
+                formatted += ", ";
+            }
+        }
+    }
+    formatted += "]";
+    return formatted;
+}
+function checkColision(block_color, block_rotation, tl) {
+    var mask = block_masks[block_color][block_rotation];
+    var solids = getSolidsFromRectangle(tl, { x: mask[0].length, y: mask.length });
+    var result = bitwiseMatrixComparison(mask, solids, "and");
+    var cont = matrixContains(result, 1);
+    return cont;
+}
 function createBlock(block_color, topLeft, rot_state) {
     var topLeftIndex = topLeft.y * COLUMNS + topLeft.x;
     var changed = [];
@@ -103,8 +149,8 @@ function createBlock(block_color, topLeft, rot_state) {
             var cur = getITileAt(topLeft.x + c, topLeft.y + r);
             // console.log(topLeft.x + c, topLeft.y + r);
             // console.log(cur)
-            var prev = cur.color;
             if (col === 1) {
+                var prev = cur.color;
                 if (cur.color !== "b") {
                     for (var _c = 0, changed_1 = changed; _c < changed_1.length; _c++) {
                         var pair = changed_1[_c];
@@ -141,24 +187,27 @@ function deleteBlock(block_color, topLeft, rot_state) {
 }
 function moveBlock(block_color, topLeft, rot_state, vector) {
     var new_pos = { x: topLeft.x + vector.x, y: topLeft.y + vector.y };
+    if (new_pos.x < 0 || new_pos.x > COLUMNS - 3) {
+        return false;
+    }
     deleteBlock(block_color, topLeft, rot_state);
-    var success;
-    try {
-        var temp = createBlock(block_color, new_pos, rot_state);
-        success = temp;
-    }
-    catch (_a) {
-        success = false;
-    }
-    console.log(success);
+    var mask = block_masks[block_color][rot_state];
+    // let solids = getSolidsFromRectangle(topLeft, {x: mask[0].length, y: mask.length});
+    // console.table(solids);
+    var success = !checkColision(block_color, rot_state, new_pos);
+    // console.log(success, "EE");
     if (success) {
+        // try {
+        //     createBlock(block_color, new_pos, rot_state);
+        // } catch (error) {
+        // }
         createBlock(block_color, new_pos, rot_state);
+        // console.log("success");
         return true;
     }
     else {
         createBlock(block_color, topLeft, rot_state);
         // deleteBlock(block_color, new_pos, rot_state);
-        console.log("EEE", topLeft);
         return false;
     }
 }
@@ -171,7 +220,17 @@ function createTiles() {
 var rot_state = 0;
 var piece_spawned = false;
 var cur_top_left = { x: 1, y: 0 };
-var SPAWN_POS = { x: 1, y: 0 };
+var keys = {
+    "left": false,
+    "right": false,
+    "up": false,
+    "down": false
+};
+var SPAWN_POS = { x: 4, y: 0 };
+var STANDARD_GRAVITY = 1 / 64;
+var SOFT_DROP_FACTOR = 62220;
+var GRAVITY = STANDARD_GRAVITY;
+var gravity_complete = 0;
 window.onload = function () {
     createTiles();
     var board_state;
@@ -183,12 +242,61 @@ window.onload = function () {
             piece_spawned = true;
         }
         try {
-            if (moveBlock("t", cur_top_left, 0, { x: 0, y: 1 })) {
-                cur_top_left.y += 1;
+            if (keys.down) {
+                GRAVITY = STANDARD_GRAVITY * SOFT_DROP_FACTOR;
+            }
+            else {
+                GRAVITY = STANDARD_GRAVITY;
+            }
+            if (gravity_complete >= 1) {
+                var move = Math.floor(gravity_complete);
+                gravity_complete -= Math.floor(gravity_complete);
+                if (moveBlock("t", cur_top_left, 0, { x: 0, y: move })) {
+                    cur_top_left.y += move;
+                    console.log(cur_top_left);
+                }
+            }
+            else {
+                gravity_complete += GRAVITY;
+            }
+            if (keys.right) {
+                if (moveBlock("t", cur_top_left, 0, { x: 1, y: 0 })) {
+                    cur_top_left.x += 1;
+                }
+            }
+            else if (keys.left) {
+                if (moveBlock("t", cur_top_left, 0, { x: -1, y: 0 })) {
+                    cur_top_left.x -= 1;
+                }
             }
         }
         catch (error) {
         }
         // console.log("y =", cur_top_left.y);
-    }, 1000 / 3);
+        // console.log(cur_top_left);
+    }, 1000 / 60);
+};
+window.onkeydown = function (e) {
+    console.log(e);
+    if (e.keyCode == 39) {
+        keys.right = true;
+    }
+    else if (e.keyCode == 37) {
+        keys.left = true;
+    }
+    else if (e.keyCode == 40) {
+        keys.down = true;
+    }
+};
+window.onkeyup = function (e) {
+    console.log(e);
+    if (e.keyCode == 39) {
+        keys.right = false;
+    }
+    else if (e.keyCode == 37) {
+        keys.left = false;
+    }
+    else if (e.keyCode == 40) {
+        keys.down = false;
+    }
 };
